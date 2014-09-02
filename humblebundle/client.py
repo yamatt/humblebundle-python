@@ -232,7 +232,7 @@ class HumbleApi(object):
         :raises RequestException: if the connection failed
         :raises HumbleResponseException: if the response was invalid
         """
-        self.logger.info("Searchingstore for url for {search_query}".format(search_query=search_query))
+        self.logger.info("Searching store for url for {search_query}".format(search_query=search_query))
         url = STORE_URL
         
         # setup query string parameters
@@ -248,6 +248,34 @@ class HumbleApi(object):
         self.store_default_params['request'] += 1 # may need to loop after a while
         
         return handlers.store_products_handler(self, response)
+        
+    def get_all_store(self, *args, **kwargs):
+        self.logger.info("Gathering initial store query result")
+        url = STORE_URL
+        
+        params = self.store_default_params.copy()
+        kwargs_params = kwargs.get('params', {}) if kwargs.get('params') else {} # make sure kwargs['params'] is a dict
+        
+        kwargs_params.update(params) # pull in any params in to kwargs
+        kwargs['params'] = kwargs_params
+        
+        response = self._request('GET', url, *args, **kwargs)
+        self.store_default_params['request'] += 1 # may need to loop after a while
+        
+        pages = response.json()['num_pages']
+        
+        self.logger.info("Requesting all {num_pages} pages".format(num_pages=pages))
+        
+        games = []
+        params = self.store_default_params.copy()
+        for page in range(pages):
+            params['page'] = page
+        
+            games += self.search_store("", **{
+                    "params": params
+                })
+            
+        return games
         
     # Internal helper methods
 
